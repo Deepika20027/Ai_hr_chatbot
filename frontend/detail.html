@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Candidate Detail</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <h2>Candidate: <span id="candidate-email"></span></h2>
+  <p>Average Score: <span id="average-score"></span></p>
+  <p id="suggestion"></p>
+
+  <div class="action-buttons">
+    <button onclick="updateStatus('selected')" class="status-btn selected">Select</button>
+    <button onclick="updateStatus('rejected')" class="status-btn rejected">Reject</button>
+  </div>
+
+  <div id="qa-list"></div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get("user_id");
+
+      if (!userId) {
+        alert("No candidate ID provided");
+        return;
+      }
+
+      fetch(`http://localhost:5000/api/recruiter/candidate/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById("candidate-email").innerText = data.email;
+          document.getElementById("average-score").innerText = data.average_score;
+
+          const suggestion = document.getElementById("suggestion");
+          if (data.average_score >= 3.5) {
+            suggestion.textContent = "✅ Suggestion: Candidate looks good. You may select.";
+            suggestion.style.color = "green";
+          } else {
+            suggestion.textContent = "❌ Suggestion: Candidate score is low. Consider rejecting.";
+            suggestion.style.color = "red";
+          }
+
+          const container = document.getElementById("qa-list");
+          container.innerHTML = "";
+
+          data.questions_answers.forEach((qa, index) => {
+            const block = document.createElement("div");
+            block.className = "qa-block";
+            block.innerHTML = `
+              <p><strong>Q${index + 1}:</strong> ${qa.question}</p>
+              <p><strong>Answer:</strong> ${qa.answer}</p>
+              <p><strong>Score:</strong> ${qa.score} / 5.0</p>
+              <p><strong>Justification:</strong> ${qa.justification}</p>
+              <hr/>
+            `;
+            container.appendChild(block);
+          });
+        });
+    });
+
+    function updateStatus(newStatus) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get("user_id");
+
+      if (!userId) {
+        alert("No candidate ID found");
+        return;
+      }
+
+      fetch(`http://localhost:5000/api/recruiter/candidate/${userId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.message) alert(data.message);
+        location.reload();
+      });
+    }
+  </script>
+
+</body>
+</html>

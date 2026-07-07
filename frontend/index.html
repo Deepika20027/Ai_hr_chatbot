@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Recruiter Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dashboard-body">
+
+  <h1>Recruiter Dashboard</h1>
+
+  <div style="text-align: center; margin-bottom: 10px;">
+    <button onclick="logout()" class="logout-btn">Logout</button>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <label for="statusFilter"><strong>Filter by status:</strong></label>
+    <select id="statusFilter" onchange="loadCandidates()">
+      <option value="all">All</option>
+      <option value="not_started">Not Started</option>
+      <option value="completed">Completed</option>
+      <option value="selected">Selected</option>
+      <option value="rejected">Rejected</option>
+    </select>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Average Score</th>
+        <th>Status</th>
+        <th>Completed At</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="candidateTable">
+      <!-- Candidates will be inserted by JavaScript -->
+    </tbody>
+  </table>
+
+<script>
+  async function loadCandidates() {
+    if (!localStorage.getItem("user_id") || localStorage.getItem("role") !== "recruiter") {
+      alert("Please login as a recruiter.");
+      window.location.href = "login.html";
+      return;
+    }
+
+    const res = await fetch("http://localhost:5000/api/recruiter/candidates");
+    const candidates = await res.json();
+
+    const filter = document.getElementById("statusFilter").value;
+    const table = document.getElementById('candidateTable');
+    table.innerHTML = "";
+
+    candidates
+      .filter(c => filter === "all" || c.status === filter)
+      .forEach(c => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${c.id}</td>
+          <td><a href="detail.html?user_id=${c.id}&name=${encodeURIComponent(c.name)}">${c.name}</a></td>
+          <td>${c.email}</td>
+          <td>${c.average_score !== null ? c.average_score : '-'}</td>
+          <td class="${getStatusClass(c.status)}">${c.status}</td>
+          <td>${c.completed_at ? new Date(c.completed_at).toLocaleString() : "-"}</td>
+          <td><a class="btn" href="detail.html?user_id=${c.id}&name=${encodeURIComponent(c.name)}">View</a></td>
+        `;
+        table.appendChild(row);
+      });
+  }
+
+  function getStatusClass(status) {
+    switch (status) {
+      case 'completed': return 'status-completed';
+      case 'selected': return 'status-selected';
+      case 'rejected': return 'status-rejected';
+      case 'not_started': return 'status-not-started';
+      default: return '';
+    }
+  }
+
+  function logout() {
+    localStorage.clear();
+    window.location.href = "login.html";
+  }
+
+  // Initial load
+  loadCandidates();
+</script>
+
+</body>
+</html>
